@@ -1,12 +1,19 @@
 version: '3'
 services:
-  postgres:
+  db:
     image: postgres:11.5-alpine
+    container_name: db
+    hostname: db 
     ports:
       - '127.0.0.1:5432:5432'
     healthcheck:
         test: ["CMD", "pg_isready", "-U", "postgres"]
         interval: 1s
+    environment:
+      POSTGRESQL_ROOT_PASSWORD: dbrootpassword
+    volumes:
+      # Will use db volume and inside to path /var/lib/mysql
+      - db:/var/lib/postgresql/data
     networks:
       - dbs
   elasticsearch:
@@ -21,9 +28,15 @@ services:
       - '127.0.0.1:5672:5672'
       - '127.0.0.1:15672:15672'
 
+volumes:
+  # Creates persistent storage volume for database
+  # Specify name so it does not append stack name in front
+  db:
+    name: db
 networks:
   # This external network allows FDW connections between H, LMS and report DBs.
   # To avoid having unnecessary dependencies between the projects
   # the network is created with `docker network crate dbs` in each project's Makefile (make services)
   dbs:
+    name: dbs
     external: true
