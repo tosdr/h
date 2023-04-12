@@ -1,4 +1,5 @@
 import sqlalchemy as sa
+from sqlalchemy.sql import text
 
 from h.models import User, UserIdentity
 from h.util.db import on_transaction_end
@@ -50,6 +51,7 @@ class UserService:
         :rtype: h.models.User or None
 
         """
+
         if authority is not None:
             username = userid_or_username
         else:
@@ -65,11 +67,18 @@ class UserService:
             self._cache[cache_key] = (
                 self.session.query(User)
                 .filter_by(username=username)
-                .filter_by(authority=authority)
+                # comment for tosdr
+                # .filter_by(authority=authority)
                 .one_or_none()
             )
 
         return self._cache[cache_key]
+
+    def fetch_from_tosdr(self, h_key):
+        statement = text("SELECT * FROM users WHERE h_key =:x")
+        statement = statement.bindparams(x=h_key)
+        user_tosdr = self.session.execute(statement).one_or_none()
+        return user_tosdr
 
     def fetch_all(self, userids):
         """
