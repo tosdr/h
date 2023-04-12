@@ -1,5 +1,6 @@
 import json
 import logging
+import pdb
 from functools import wraps
 from urllib.parse import parse_qs, urlparse
 
@@ -33,7 +34,6 @@ def handles_oauth_errors(wrapped):
 
     return inner
 
-
 @view_defaults(route_name="oauth_authorize")
 class OAuthAuthorizeController:
     def __init__(self, context, request):
@@ -44,7 +44,10 @@ class OAuthAuthorizeController:
         self.oauth = self.request.find_service(name="oauth_provider")
 
     @view_config(
-        request_method="GET", renderer="h:templates/oauth/authorize.html.jinja2"
+        request_method="GET",
+        # for tosdr 
+        # renderer=None
+        renderer="h:templates/oauth/authorize.html.jinja2"
     )
     def get(self):
         """
@@ -87,7 +90,7 @@ class OAuthAuthorizeController:
 
     @view_config(
         request_method="POST",
-        is_authenticated=True,
+        # is_authenticated=True,
         renderer="json",
     )
     def post(self):
@@ -126,12 +129,6 @@ class OAuthAuthorizeController:
                 err.description or f"Error: {self.context.error}"
             ) from err
 
-        if self.request.authenticated_userid is None:
-            raise HTTPFound(
-                self.request.route_url(
-                    "login", _query={"next": self.request.url, "for_oauth": True}
-                )
-            )
 
         client_id = credentials.get("client_id")
         client = self.request.db.query(models.AuthClient).get(client_id)
@@ -142,7 +139,7 @@ class OAuthAuthorizeController:
         # logged-in user.
         if client.trusted:
             return self._authorized_response()
-
+        
         state = credentials.get("state")
         user = self.user_svc.fetch(self.request.authenticated_userid)
         response_mode = credentials.get("request").response_mode
@@ -156,20 +153,27 @@ class OAuthAuthorizeController:
             "state": state,
         }
 
-    @handles_oauth_errors
+    # @handles_oauth_errors
     def _authorized_response(self):
         # We don't support scopes at the moment, but oauthlib does need a scope,
         # so we're explicitly overwriting whatever the client provides.
         scopes = DEFAULT_SCOPES
-        user = self.user_svc.fetch(self.request.authenticated_userid)
-        credentials = {"user": user}
+        h_key = self.request.cookies.get('h_key')
+        user_tosdr = self.user_svc.fetch_from_tosdr(h_key)
+        
+        # TOSDR TO-DO : handle error here
+        # TOSDR TO-DO : create user if it does not exist
 
+        username = user_tosdr.username
+        user = self.user_svc.fetch(username, authority="tosdr")
+        credentials = {"user": user}
         headers, _, _ = self.oauth.create_authorization_response(
             self.request.url, scopes=scopes, credentials=credentials
         )
 
         try:
-            return HTTPFound(location=headers["Location"])
+            found = HTTPFound(location=headers["Location"])
+            return self._render_web_message_response(found.location)
         except KeyError as err:
             client_id = self.request.params.get("client_id")
             raise RuntimeError(
@@ -207,7 +211,8 @@ class OAuthAccessTokenController:
         )
 
         if status == 200:
-            return json.loads(body)
+            response = json.loads(body)
+            return response
 
         raise exception_response(status, detail=body)
 
