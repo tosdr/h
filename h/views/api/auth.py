@@ -105,8 +105,8 @@ class OAuthAuthorizeController:
     @view_config(
         request_method="POST",
         request_param="response_mode=web_message",
-        is_authenticated=True,
-        renderer="h:templates/oauth/authorize_web_message.html.jinja2",
+        # is_authenticated=True,
+        renderer="json",
     )
     def post_web_message(self):
         """
@@ -118,8 +118,7 @@ class OAuthAuthorizeController:
 
         .. _draft-sakimura-oauth: https://tools.ietf.org/html/draft-sakimura-oauth-wmrm-00
         """
-        found = self._authorized_response()
-        return self._render_web_message_response(found.location)
+        return self._authorized_response()
 
     def _authorize(self):
         try:
@@ -159,11 +158,9 @@ class OAuthAuthorizeController:
         # so we're explicitly overwriting whatever the client provides.
         scopes = DEFAULT_SCOPES
         h_key = self.request.cookies.get('h_key')
-        user_tosdr = self.user_svc.fetch_from_tosdr(h_key)
-        
+        user_tosdr = self.user_svc.fetch_from_tosdr(h_key)        
         # TOSDR TO-DO : handle error here
         # TOSDR TO-DO : create user if it does not exist
-
         username = user_tosdr.username
         user = self.user_svc.fetch(username, authority="tosdr")
         credentials = {"user": user}
