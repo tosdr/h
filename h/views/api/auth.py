@@ -13,6 +13,8 @@ from pyramid.view import view_config, view_defaults
 from h import models
 from h.models import User
 from h.services.oauth import DEFAULT_SCOPES
+from h.services.user_signup import UserSignupService
+
 from h.util.datetime import utc_iso8601
 from h.views.api.config import api_config
 from h.views.api.exceptions import OAuthAuthorizeError, OAuthTokenError
@@ -168,7 +170,7 @@ class OAuthAuthorizeController:
         # TOSDR : create user in h if it does not exist
         if not user:
             password = ''.join(random.choice(string.printable) for i in range(12))
-            user = User(username=user_tosdr.username, email=user_tosdr.email, privacy_accepted=datetime.now(), comms_opt_in=False, authority='tosdr', password=password)
+            user = User(username=user_tosdr.username, email=user_tosdr.email, privacy_accepted=datetime.now(), comms_opt_in=False, password=password, authority=self.request.default_authority)
             self.session.add(user)
         
         credentials = {"user": user}
