@@ -1,6 +1,8 @@
 import json
 import logging
-import pdb
+import random
+import string
+from datetime import datetime
 from functools import wraps
 from urllib.parse import parse_qs, urlparse
 
@@ -9,6 +11,7 @@ from pyramid.httpexceptions import HTTPFound, exception_response
 from pyramid.view import view_config, view_defaults
 
 from h import models
+from h.models import User
 from h.services.oauth import DEFAULT_SCOPES
 from h.util.datetime import utc_iso8601
 from h.views.api.config import api_config
@@ -39,7 +42,7 @@ class OAuthAuthorizeController:
     def __init__(self, context, request):
         self.context = context
         self.request = request
-
+        self.session = request.db
         self.user_svc = self.request.find_service(name="user")
         self.oauth = self.request.find_service(name="oauth_provider")
 
@@ -157,12 +160,17 @@ class OAuthAuthorizeController:
         # We don't support scopes at the moment, but oauthlib does need a scope,
         # so we're explicitly overwriting whatever the client provides.
         scopes = DEFAULT_SCOPES
+        # TOSDR : find tosdr user based on h_key cookie
         h_key = self.request.cookies.get('h_key')
         user_tosdr = self.user_svc.fetch_from_tosdr(h_key)        
-        # TOSDR TO-DO : handle error here
-        # TOSDR TO-DO : create user if it does not exist
         username = user_tosdr.username
         user = self.user_svc.fetch(username, authority="tosdr")
+        # TOSDR : create user in h if it does not exist
+        if not user:
+            password = ''.join(random.choice(string.printable) for i in range(12))
+            user = User(username=user_tosdr.username, email=user_tosdr.email, privacy_accepted=datetime.now(), comms_opt_in=False, authority='tosdr', password=password)
+            self.session.add(user)
+        
         credentials = {"user": user}
         headers, _, _ = self.oauth.create_authorization_response(
             self.request.url, scopes=scopes, credentials=credentials
