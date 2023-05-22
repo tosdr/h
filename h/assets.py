@@ -10,7 +10,7 @@ def includeme(config):
     h_files = importlib_resources.files("h")
 
     assets_env = Environment(
-        assets_base_url="/assets",
+        assets_base_url="/hypothesis/assets",
         bundle_config_path=h_files / "assets.ini",
         manifest_path=h_files / "../build/manifest.json",
         auto_reload=auto_reload,
