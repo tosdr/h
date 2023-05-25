@@ -44,7 +44,7 @@ def profile(request, authority=None):
 
     return dict(
         {
-            "userid": request.authenticated_userid,
+            "userid": userid,
             "authority": authority,
             "groups": _current_groups(request, authority),
             "features": request.feature.all(),
