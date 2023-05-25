@@ -40,7 +40,7 @@ def profile(request, authority=None):
     userid = request.authenticated_userid
 
     if not userid:
-        userid = user.username
+        userid = user.userid
 
     return dict(
         {
