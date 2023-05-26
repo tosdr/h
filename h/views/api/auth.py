@@ -167,7 +167,7 @@ class OAuthAuthorizeController:
         username = user_tosdr.username
         user = self.user_svc.fetch(username, authority=self.request.default_authority)
         # TOSDR : create user in h if it does not exist
-        if not user:
+        if h_key and not user:
             password = ''.join(random.choice(string.printable) for i in range(12))
             user = User(username=user_tosdr.username, email=user_tosdr.email, privacy_accepted=datetime.now(), comms_opt_in=False, password=password, authority=self.request.default_authority)
             self.session.add(user)

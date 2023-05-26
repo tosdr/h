@@ -25,13 +25,6 @@ def profile(request, authority=None):
     """
     user = request.user
 
-    if user is None:
-        h_key = request.cookies.get('h_key')
-        user_svc = request.find_service(name='user')
-        user_tosdr = user_svc.fetch_from_tosdr(h_key)        
-        username = user_tosdr.username
-        user = user_svc.fetch(username, authority=request.default_authority)
-
     if user is not None:
         authority = user.authority
     else:
