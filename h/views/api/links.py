@@ -1,3 +1,4 @@
+import os
 from h.views.api.config import api_config
 from h.views.api.helpers.angular import AngularRouteTemplater
 
@@ -18,6 +19,9 @@ def links(_context, request):
     tag_search_url = request.route_url("activity.search", _query={"q": 'tag:"__tag__"'})
     tag_search_url = tag_search_url.replace("__tag__", ":tag")
 
+    settings = request.registry.settings
+    tosdr_url = settings.get("h.tosdr")
+
     oauth_authorize_url = request.route_url("oauth_authorize")
     oauth_revoke_url = request.route_url("oauth_revoke")
 
@@ -34,4 +38,5 @@ def links(_context, request):
         "signup": request.route_url("signup"),
         "user": templater.route_template("stream.user_query"),
         "websocket": websocket_url,
+        "tosdr": tosdr_url
     }
