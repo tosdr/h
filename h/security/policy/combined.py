@@ -76,7 +76,6 @@ class SecurityPolicy(IdentityBasedPolicy):
         # Then we try the bearer header (or `access_token` GET param)
 
         result = getattr(self._bearer_token_policy, method)(request, *args, **kwargs)
-        print(result)
 
         if not result and self._http_basic_auth_policy.handles(request):
             # Only then do we look for auth clients authenticating with basic
