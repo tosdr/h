@@ -22,6 +22,8 @@ services:
       - '127.0.0.1:9200:9200'
     environment:
       - discovery.type=single-node
+    networks:
+      - elasticsearch
   rabbit:
     image: rabbitmq:3.6-management-alpine
     ports:
@@ -40,3 +42,7 @@ networks:
   dbs:
     name: dbs
     external: true
+  elasticsearch:
+    name: elasticsearch
+    external: true
+  
