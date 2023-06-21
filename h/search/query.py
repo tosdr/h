@@ -272,6 +272,7 @@ class UriCombinedWildcardFilter:
             [u for u in wildcard_uris if wildcard_uri_is_valid(u)],
             normalize_method=self._wildcard_uri_normalized,
         )
+        strict_uri = uris[0]
         uris = self._normalize_uris(uris)
 
         queries = []
@@ -279,7 +280,8 @@ class UriCombinedWildcardFilter:
             queries = [Q("wildcard", **{"target.scope": u}) for u in wildcard_uris]
         if uris:
             queries.append(Q("terms", **{"target.scope": uris}))
-        return search.query("bool", should=queries)
+        # TOSDR
+        return search.query(Q("bool", must=[Q("match", uri=strict_uri)]))
 
     def _normalize_uris(self, query_uris, normalize_method=uri.normalize):
         uris = set()
