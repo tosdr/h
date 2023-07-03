@@ -1,6 +1,7 @@
 import json
 import logging
 import random
+import re
 import string
 from datetime import datetime
 from functools import wraps
@@ -163,13 +164,14 @@ class OAuthAuthorizeController:
         scopes = DEFAULT_SCOPES
         # TOSDR : find tosdr user based on h_key cookie
         h_key = self.request.cookies.get('h_key')
-        user_tosdr = self.user_svc.fetch_from_tosdr(h_key)        
+        user_tosdr = self.user_svc.fetch_from_tosdr(h_key)     
         username = user_tosdr.username
         user = self.user_svc.fetch(username, authority=self.request.default_authority)
         # TOSDR : create user in h if it does not exist
         if h_key and not user:
+            clean_username = re.sub('[^a-zA-Z0-9\_\.]', '', username)
             password = ''.join(random.choice(string.printable) for i in range(12))
-            user = User(username=user_tosdr.username, email=user_tosdr.email, privacy_accepted=datetime.now(), comms_opt_in=False, password=password, authority=self.request.default_authority)
+            user = User(username=clean_username, email=user_tosdr.email, privacy_accepted=datetime.now(), comms_opt_in=False, password=password, authority=self.request.default_authority)
             self.session.add(user)
         
         credentials = {"user": user}
