@@ -1,25 +1,4 @@
 services:
-  postgres:
-    image: postgres:15.6-alpine
-    ports:
-      - '127.0.0.1:5432:5432'
-    healthcheck:
-        test: ["CMD", "pg_isready", "-U", "postgres"]
-        interval: 1s
-    environment:
-      POSTGRES_HOST_AUTH_METHOD: trust
-    networks:
-      - dbs
-  elasticsearch:
-    image: hypothesis/elasticsearch:latest
-    ports:
-      - '127.0.0.1:9200:9200'
-    healthcheck:
-        test: curl --fail --silent http://localhost:9200 >/dev/null
-        interval: 3s
-        start_period: 1m
-    environment:
-      - discovery.type=single-node
   rabbit:
     image: rabbitmq:3.12-management-alpine
     ports:
@@ -31,4 +10,9 @@ networks:
   # To avoid having unnecessary dependencies between the projects
   # the network is created with `docker network create dbs` in each project's Makefile (make services)
   dbs:
+    name: dbs
     external: true
+  elasticsearch:
+    name: elasticsearch
+    external: true
+  

@@ -28,6 +28,7 @@ def configure(environ=None, settings=None):  # pylint: disable=too-many-statemen
         environ = os.environ
     if settings is None:  # pragma: no cover
         settings = {}
+
     settings_manager = SettingsManager(settings, environ)
     # Configuration for external components
     settings_manager.set("broker_url", "BROKER_URL")
@@ -87,6 +88,9 @@ def configure(environ=None, settings=None):  # pylint: disable=too-many-statemen
     # making requests to OAuth endpoints. As a public client, it does not have a
     # secret.
     settings_manager.set("h.client_oauth_id", "CLIENT_OAUTH_ID")
+
+    # Base domain for tosdr
+    settings_manager.set("h.tosdr", "TOSDR_URL")
 
     # The list of origins that the client will respond to cross-origin RPC
     # requests from.

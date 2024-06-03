@@ -1,5 +1,9 @@
 import json
 import logging
+import random
+import re
+import string
+from datetime import datetime
 from functools import wraps
 from urllib.parse import parse_qs, urlparse
 
@@ -8,7 +12,9 @@ from pyramid.httpexceptions import HTTPFound, exception_response
 from pyramid.view import view_config, view_defaults
 
 from h import models
+from h.models import User
 from h.services.oauth import DEFAULT_SCOPES
+
 from h.util.datetime import utc_iso8601
 from h.views.api.config import api_config
 from h.views.api.exceptions import OAuthAuthorizeError, OAuthTokenError
@@ -33,18 +39,20 @@ def handles_oauth_errors(wrapped):
 
     return inner
 
-
 @view_defaults(route_name="oauth_authorize")
 class OAuthAuthorizeController:
     def __init__(self, context, request):
         self.context = context
         self.request = request
-
+        self.session = request.db
         self.user_svc = self.request.find_service(name="user")
         self.oauth = self.request.find_service(name="oauth_provider")
 
     @view_config(
-        request_method="GET", renderer="h:templates/oauth/authorize.html.jinja2"
+        request_method="GET",
+        # for tosdr 
+        # renderer=None
+        renderer="h:templates/oauth/authorize.html.jinja2"
     )
     def get(self):
         """
@@ -87,7 +95,7 @@ class OAuthAuthorizeController:
 
     @view_config(
         request_method="POST",
-        is_authenticated=True,
+        # is_authenticated=True,
         renderer="json",
     )
     def post(self):
@@ -102,8 +110,8 @@ class OAuthAuthorizeController:
     @view_config(
         request_method="POST",
         request_param="response_mode=web_message",
-        is_authenticated=True,
-        renderer="h:templates/oauth/authorize_web_message.html.jinja2",
+        # is_authenticated=True,
+        renderer="json",
     )
     def post_web_message(self):
         """
@@ -115,8 +123,7 @@ class OAuthAuthorizeController:
 
         .. _draft-sakimura-oauth: https://tools.ietf.org/html/draft-sakimura-oauth-wmrm-00
         """
-        found = self._authorized_response()
-        return self._render_web_message_response(found.location)
+        return self._authorized_response()
 
     def _authorize(self):
         try:
@@ -126,12 +133,6 @@ class OAuthAuthorizeController:
                 err.description or f"Error: {self.context.error}"
             ) from err
 
-        if self.request.authenticated_userid is None:
-            raise HTTPFound(
-                self.request.route_url(
-                    "login", _query={"next": self.request.url, "for_oauth": True}
-                )
-            )
 
         client_id = credentials.get("client_id")
         client = self.request.db.get(models.AuthClient, client_id)
@@ -142,7 +143,7 @@ class OAuthAuthorizeController:
         # logged-in user.
         if client.trusted:
             return self._authorized_response()
-
+        
         state = credentials.get("state")
         user = self.user_svc.fetch(self.request.authenticated_userid)
         response_mode = credentials.get("request").response_mode
@@ -156,20 +157,31 @@ class OAuthAuthorizeController:
             "state": state,
         }
 
-    @handles_oauth_errors
+    # @handles_oauth_errors
     def _authorized_response(self):
         # We don't support scopes at the moment, but oauthlib does need a scope,
         # so we're explicitly overwriting whatever the client provides.
         scopes = DEFAULT_SCOPES
-        user = self.user_svc.fetch(self.request.authenticated_userid)
+        # TOSDR : find tosdr user based on h_key cookie
+        h_key = self.request.cookies.get('h_key')
+        user_tosdr = self.user_svc.fetch_from_tosdr(h_key)     
+        username = user_tosdr.username
+        user = self.user_svc.fetch(username, authority=self.request.default_authority)
+        # TOSDR : create user in h if it does not exist
+        if h_key and not user:
+            clean_username = re.sub('[^a-zA-Z0-9\_\.]', '', username)
+            password = ''.join(random.choice(string.printable) for i in range(12))
+            user = User(username=clean_username, email=user_tosdr.email, privacy_accepted=datetime.now(), comms_opt_in=False, password=password, authority=self.request.default_authority)
+            self.session.add(user)
+        
         credentials = {"user": user}
-
         headers, _, _ = self.oauth.create_authorization_response(
             self.request.url, scopes=scopes, credentials=credentials
         )
 
         try:
-            return HTTPFound(location=headers["Location"])
+            found = HTTPFound(location=headers["Location"])
+            return self._render_web_message_response(found.location)
         except KeyError as err:  # pragma: no cover
             client_id = self.request.params.get("client_id")
             raise RuntimeError(
@@ -207,7 +219,8 @@ class OAuthAccessTokenController:
         )
 
         if status == 200:
-            return json.loads(body)
+            response = json.loads(body)
+            return response
 
         raise exception_response(status, detail=body)
 

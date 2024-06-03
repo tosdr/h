@@ -63,6 +63,7 @@ def sidebar_app(request, extra=None):
         # The list of origins that the client will respond to cross-origin RPC
         # requests from.
         "rpcAllowedOrigins": settings.get("h.client_rpc_allowed_origins"),
+        "tosdr": settings.get("h.tosdr")
     }
 
     if sentry_public_dsn:  # pragma: no cover

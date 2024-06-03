@@ -74,6 +74,7 @@ class SecurityPolicy(IdentityBasedPolicy):
             return getattr(self._ui_policy, method)(request, *args, **kwargs)
 
         # Then we try the bearer header (or `access_token` GET param)
+
         result = getattr(self._bearer_token_policy, method)(request, *args, **kwargs)
 
         if not result and self._http_basic_auth_policy.handles(request):
@@ -87,7 +88,9 @@ class SecurityPolicy(IdentityBasedPolicy):
 
     @staticmethod
     def _is_api_request(request):
-        return request.path.startswith("/api") and request.path not in [
+        return (request.path.startswith("/api") or request.path.startswith("/hypothesis/api")) and request.path not in [
             "/api/token",
             "/api/badge",
+            "/hypothesis/api/token",
+            "/hypothesis/api/badge"
         ]

@@ -31,10 +31,15 @@ def profile(request, authority=None):
         authority = user.authority
     else:
         authority = authority or request.default_authority
+    
+    userid = request.authenticated_userid
+
+    if not userid:
+        userid = user.userid
 
     return dict(
         {
-            "userid": request.authenticated_userid,
+            "userid": userid,
             "authority": authority,
             "groups": _current_groups(request, authority),
             "features": request.feature.all(),
